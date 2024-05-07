@@ -6,7 +6,7 @@ import os
 import random
 
 
-bot = telebot.TeleBot('6928806121:AAHpUedibrQY4LU8_CIHu51d680kN41f9aM')
+bot = telebot.TeleBot('token')
 users, talks = [], []
 developers = [947467861]   # 1968018162
 
