@@ -1,10 +1,10 @@
-19.03.2024 13:55:12 �> Start
+19.03.2024 13:55:12 �> Start
 
-19.03.2024 13:56:47 �> Exception
+19.03.2024 13:56:47 �> Exception
 'charmap' codec can't encode character '\U0001f31f' in position 36: character maps to <undefined>
 
 
-19.03.2024 13:56:48 �> Start
+19.03.2024 13:56:48 �> Start
 
 19.03.2024 14:02:38 —> Start
 
@@ -145,4 +145,48 @@ HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded wit
 04.05.2024 20:32:43 -> Start
 
 04.05.2024 20:33:21 -> Start
+
+26.05.2024 15:43:50 -> Start
+
+26.05.2024 15:46:46 -> Start
+
+26.05.2024 15:49:07 -> Start
+
+26.05.2024 15:51:44 -> Start
+
+26.05.2024 16:41:31 -> Start
+
+26.05.2024 16:48:55 -> Start
+
+26.05.2024 16:51:33 -> Start
+
+26.05.2024 16:54:24 -> Start
+
+26.05.2024 17:04:48 -> Start
+
+26.05.2024 17:06:23 -> Start
+
+26.05.2024 17:06:43 -> Exception
+Exception code: 280
+ID: 947467861
+Mode: 2
+Phase: 0
+Message: Случайный человек
+Exception: "empty range in randrange(0, 0)"
+
+26.05.2024 17:06:43 -> Start
+
+26.05.2024 17:07:52 -> Exception
+Exception code: 280
+ID: 947467861
+Mode: 2
+Phase: 0
+Message: Случайный человек
+Exception: "empty range in randrange(0, 0)"
+
+26.05.2024 17:07:52 -> Start
+
+26.05.2024 17:22:16 -> Start
+
+26.05.2024 17:26:40 -> Start
 
