@@ -6,9 +6,13 @@ import time
 import random
 
 
-bot = telebot.TeleBot('6928806121:AAHpUedibrQY4LU8_CIHu51d680kN41f9aM')
+bot = telebot.TeleBot('6928806121:AAHpUedibrQY4LU8_CIHu51d680kN41f9aM', parse_mode='Markdown')
 
-main_menu = 'Главное меню!'
+main_menu = ('*Главное меню*\n\nУзнайте больше о Прикамье и его выдающихся жителях!\n\n'
+             '*• Города:* Исследуйте историю населенных пунктов региона.\n'
+             '*• Люди:* Откройте для себя биографии и достижения тех, кто оставил неизгладимый след в Пермском крае.'
+             '\n\nВы также можете поделиться своей историей! Отправьте мне текстовый файл (.txt) с информацией '
+             'о вашем городе или выдающейся личности, и после проверки модерацией они будут добавлены в бота.')
 
 main_menu_button = types.ReplyKeyboardMarkup(resize_keyboard=True)
 main_menu_button.add(
@@ -115,7 +119,8 @@ def telegram_bot():
 
             bot.send_message(
                 message.chat.id,
-                'К сожалению, во время работы бота произошла неожиданная ошибка.',
+                'К сожалению, произошла неожиданная ошибка. '
+                'Поддержка рассмотрит Вашу проблему, чтобы подобные ошибки больше не тревожили Вас.'
             )
             bot.send_message(message.chat.id, main_menu, reply_markup=main_menu_button)
 
@@ -136,15 +141,26 @@ def telegram_bot():
                 if not os.path.exists(f'booksFromUsers'):
                     os.makedirs(f'booksFromUsers')
 
-                with open(f'booksFromUsers/{user.identifier}_{(datetime.datetime.today()).strftime("%d%m%Y_%H%M%S")}'
-                          f'.txt', "w", encoding='utf-8') as f:
+                n = 0
+                file_name = (f'booksFromUsers/{user.identifier}_'
+                             f'{(datetime.datetime.today()).strftime("%d%m%Y_%H%M%S")}{str(n)}')
+
+                while os.path.exists(f'{file_name}.txt'):
+                    n += 1
+                    file_name = f'{file_name[:-(len(str(n-1)))]}{str(n)}'
+
+                with open(f'{file_name}.txt', "w", encoding='utf-8') as f:
                     f.write(book)
 
             elif (user.mode == -1) or (message.text.lower() == '/start') or (message.text.lower() == 'главное меню'):
                 if message.text.lower() != 'главное меню':
                     bot.send_message(
                         message.chat.id,
-                        "Добро пожаловать! Вступительные слова."
+                        "*Приветствую Вас в боте о Прикамье и его выдающихся личностях!*\n\n"
+                        "Я здесь, чтобы познакомить Вас с богатой историей этого региона.\n\n"
+                        "Исследуйте населенные пункты Прикамья, узнайте о людях, которые оставили неизгладимый "
+                        "след в его истории, и поделитесь своими собственными знаниями о регионе.\n\n"
+                        "Начните ваше путешествие прямо сейчас и откройте для себя красоту и наследие Прикамья!"
                     )
                 bot.send_message(message.chat.id, main_menu, reply_markup=main_menu_button)
                 user.mode = 0
@@ -154,7 +170,7 @@ def telegram_bot():
                 if message.text.lower() == 'города':
                     bot.send_message(
                         message.chat.id,
-                        "Выберите режим работы",
+                        "Выберите режим работы при помощи кнопок ниже",
                         reply_markup=m1_p0_button
                     )
                     user.mode = 1
@@ -162,7 +178,7 @@ def telegram_bot():
                 elif message.text.lower() == 'люди':
                     bot.send_message(
                         message.chat.id,
-                        "Выберите режим работы",
+                        "Выберите режим работы при помощи кнопок ниже",
                         reply_markup=m2_p0_button
                     )
                     user.mode = 2
@@ -170,8 +186,13 @@ def telegram_bot():
                 elif message.text.lower() == 'контакты поддержки':
                     bot.send_message(
                         message.chat.id,
-                        "Текст про поддержку!",
-                        reply_markup=main_menu_button
+                        "*Контакты поддержки:*\n"
+                        "https://t.me/VladimirRumyantsev\n"
+                        "https://t.me/LyutyChyort\n"
+                        "https://t.me/kystikikolychie\n"
+                        "https://t.me/Lisiy_Svet\n\n"
+                        "Чтобы поддержать разработчиков финансово, напишите одному из контактов.",
+                        reply_markup=main_menu_button, parse_mode='Markdown'
                     )
 
             elif user.mode == 1:
@@ -180,11 +201,12 @@ def telegram_bot():
                         cities = os.listdir('data/cities')
                         line = ''
                         for i in cities:
-                            line += f'• {i}\n'
+                            line += f'\n• [{i}](tg://resolve?domain=history_of_parma_bot&text={i})'
 
                         bot.send_message(
                             message.chat.id,
-                            f"Введите название города\n\nГорода, которые у нас есть:\n{line}",
+                            f"Введите название города, о котором желаете узнать больше"
+                            f"\n\nГорода, которые у нас есть:{line}",
                             reply_markup=m1_p1_button
                         )
                         user.phase = 1
@@ -201,7 +223,7 @@ def telegram_bot():
                 elif (user.phase == 1) and (message.text.lower() == 'назад'):
                     bot.send_message(
                         message.chat.id,
-                        "Выберите режим работы",
+                        "Выберите режим работы при помощи кнопок ниже",
                         reply_markup=m1_p0_button
                     )
                     user.phase = 0
@@ -213,28 +235,22 @@ def telegram_bot():
                         with open(f'data/cities/{city}/{city}.txt', 'r') as file:
                             bot.send_message(message.chat.id, file.read(), reply_markup=m1_p1_button)
 
-                        cities = os.listdir('data/cities')
-                        line = ''
-                        for i in cities:
-                            line += f'• {i}\n'
-
                         bot.send_message(
                             message.chat.id,
-                            'Введите название другого города, либо выйдите в главное меню.\n\n'
-                            f'Города, которые у нас есть:\n{line}',
+                            'Вы можете ввести название другого города, либо выйти в главное меню.',
                             reply_markup=m1_p1_button
                         )
                     except FileNotFoundError:
                         cities = os.listdir('data/cities')
                         line = ''
                         for i in cities:
-                            line += f'• {i}\n'
+                            line += f'\n• [{i}](tg://resolve?domain=history_of_parma_bot&text={i})'
 
                         bot.send_message(
                             message.chat.id,
                             'Данный город не найден в базе данных. '
-                            'Введите название другого города, либо выйдите в главное меню.\n\n'
-                            f'Города, которые у нас есть:\n{line}',
+                            'Вы можете ввести название другого города, либо выйти в главное меню.\n\n'
+                            f'Города, которые у нас есть:{line}',
                             reply_markup=m1_p1_button
                         )
                     except Exception as ex:
@@ -246,11 +262,12 @@ def telegram_bot():
                         people = os.listdir('data/people')
                         line = ''
                         for i in people:
-                            line += f'• {i}\n'
+                            line += f'\n• [{i}](tg://resolve?domain=history_of_parma_bot&text={i})'
 
                         bot.send_message(
                             message.chat.id,
-                            f"Введите фамилию человека\n\nЛюди, которые у нас есть:\n{line}",
+                            f"Введите фамилию человека, о котором желаете узнать больше"
+                            f"\n\nЛюди, которые у нас есть:{line}",
                             reply_markup=m2_p1_button
                         )
                         user.phase = 1
@@ -267,7 +284,7 @@ def telegram_bot():
                 elif (user.phase == 1) and (message.text.lower() == 'назад'):
                     bot.send_message(
                         message.chat.id,
-                        "Выберите режим работы",
+                        "Выберите режим работы при помощи кнопок ниже",
                         reply_markup=m2_p0_button
                     )
                     user.phase = 0
@@ -279,28 +296,22 @@ def telegram_bot():
                         with open(f'data/people/{human}/{human}.txt', 'r') as file:
                             bot.send_message(message.chat.id, file.read(), reply_markup=m2_p1_button)
 
-                        people = os.listdir('data/people')
-                        line = ''
-                        for i in people:
-                            line += f'• {i}\n'
-
                         bot.send_message(
                             message.chat.id,
-                            'Введите фамилию другого человека, либо выйдите в главное меню.\n\n'
-                            f'Люди, которые у нас есть:\n{line}',
+                            'Вы можете ввести фамилию другого человека, либо выйти в главное меню.',
                             reply_markup=m2_p1_button
                         )
                     except FileNotFoundError:
                         people = os.listdir('data/people')
                         line = ''
                         for i in people:
-                            line += f'• {i}\n'
+                            line += f'\n• [{i}](tg://resolve?domain=history_of_parma_bot&text={i})'
 
                         bot.send_message(
                             message.chat.id,
                             'Данный человек не найден в базе данных. '
-                            'Введите фамилию другого человека, либо выйдите в главное меню.\n\n'
-                            f'Люди, которые у нас есть:\n{line}',
+                            'Вы можете ввести фамилию другого человека, либо выйти в главное меню.\n\n'
+                            f'Люди, которые у нас есть:{line}',
                             reply_markup=m2_p1_button
                         )
                     except Exception as ex:
@@ -311,7 +322,8 @@ def telegram_bot():
         except Exception as ex:
             bot.send_message(
                 message.chat.id,
-                'К сожалению, произошла неожиданная ошибка.',
+                'К сожалению, произошла неожиданная ошибка. '
+                'Поддержка рассмотрит Вашу проблему, чтобы подобные ошибки больше не тревожили Вас.'
             )
 
             raise Exception(f'Exception code: 280\nID: {message.chat.id}\nMode: {str(user.mode)}\n'
