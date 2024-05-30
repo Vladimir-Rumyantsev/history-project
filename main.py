@@ -6,13 +6,14 @@ import time
 import random
 
 
-bot = telebot.TeleBot('6928806121:AAHpUedibrQY4LU8_CIHu51d680kN41f9aM', parse_mode='Markdown')
+bot = telebot.TeleBot('6928806121:AAHpUedibrQY4LU8_CIHu51d680kN41f9aM')
 
 main_menu = ('*Главное меню*\n\nУзнайте больше о Прикамье и его выдающихся жителях!\n\n'
              '*• Города:* Исследуйте историю населенных пунктов региона.\n'
-             '*• Люди:* Откройте для себя биографии и достижения тех, кто оставил неизгладимый след в Пермском крае.'
-             '\n\nВы также можете поделиться своей историей! Отправьте мне текстовый файл (.txt) с информацией '
-             'о вашем городе или выдающейся личности, и после проверки модерацией они будут добавлены в бота.')
+             '*• Люди:* Откройте для себя биографии и достижения тех, кто оставил неизгладимый след на историю '
+             'пермского края.\n\nВы также можете поделиться своей историей! '
+             'Отправьте мне текстовый файл (.txt) с информацией о вашем городе или выдающейся личности, '
+             'и после проверки модерацией они будут добавлены в бота.')
 
 main_menu_button = types.ReplyKeyboardMarkup(resize_keyboard=True)
 main_menu_button.add(
@@ -21,29 +22,17 @@ main_menu_button.add(
     types.KeyboardButton('Контакты поддержки')
 )
 
-m1_p0_button = types.ReplyKeyboardMarkup(resize_keyboard=True)
-m1_p0_button.add(
+city_selection_menu_buttons = types.ReplyKeyboardMarkup(resize_keyboard=True)
+city_selection_menu_buttons.add(
     types.KeyboardButton('Определённый город'),
     types.KeyboardButton('Случайный город'),
     types.KeyboardButton('Главное меню')
 )
 
-m1_p1_button = types.ReplyKeyboardMarkup(resize_keyboard=True)
-m1_p1_button.add(
-    types.KeyboardButton('Назад'),
-    types.KeyboardButton('Главное меню')
-)
-
-m2_p0_button = types.ReplyKeyboardMarkup(resize_keyboard=True)
-m2_p0_button.add(
+human_selection_menu_buttons = types.ReplyKeyboardMarkup(resize_keyboard=True)
+human_selection_menu_buttons.add(
     types.KeyboardButton('Определённый человек'),
     types.KeyboardButton('Случайный человек'),
-    types.KeyboardButton('Главное меню')
-)
-
-m2_p1_button = types.ReplyKeyboardMarkup(resize_keyboard=True)
-m2_p1_button.add(
-    types.KeyboardButton('Назад'),
     types.KeyboardButton('Главное меню')
 )
 
@@ -82,20 +71,59 @@ class User:
         if not os.path.exists(self.path):
             os.makedirs(self.path)
             self.mode = -1
-            self.phase = 0
 
         else:
             with open(f'{self.path}/data.txt', "r", encoding='utf-8') as f:
                 arr = f.readlines()
                 self.mode = int(arr[1])
-                self.phase = int(arr[2])
 
     def write(self):
         with open(f'{self.path}/data.txt', "w", encoding='utf-8') as f:
-            f.write(f'{str(self.identifier)}\n{str(self.mode)}\n{str(self.phase)}')
+            f.write(f'{str(self.identifier)}\n{str(self.mode)}')
 
 
 def telegram_bot():
+    def get_inline_keyboard(path, row_length=3):
+        objects = os.listdir(path)
+        keyboard = types.InlineKeyboardMarkup()
+        if not objects:
+            raise Exception('Exception code: 102')
+        row = []
+        for obj in objects:
+            button = types.InlineKeyboardButton(text=obj, callback_data=obj)
+            row.append(button)
+            if len(row) == row_length:
+                keyboard.add(*row)
+                row = []
+        if row:
+            keyboard.add(*row)
+        return keyboard
+
+    @bot.callback_query_handler(func=lambda call: True)
+    def callback_handler(call):
+        user = User(call.message.chat.id)
+        obj = call.data
+
+        if user.mode == 1:
+            response = 'К сожалению, данный город не найден в нашей базе данных.'
+            path = 'data/cities'
+        else:
+            response = 'К сожалению, данный человек не найден в нашей базе данных.'
+            path = 'data/people'
+
+        try:
+            with open(f'{path}/{obj}/{obj}.txt', 'r') as file:
+                response = file.read()
+            bot.send_photo(call.message.chat.id, photo=open(f'{path}/{obj}/{obj}.jpg', 'rb'))
+        except FileNotFoundError:
+            pass
+        except Exception as ex:
+            raise Exception(f'Exception code: 238\nException: {ex}')
+        finally:
+            bot.send_message(call.message.chat.id, response, parse_mode='Markdown')
+
+        user.write()
+
     @bot.message_handler(content_types=['text', 'document'])
     def send_text(message):
         global ex_errors
@@ -114,7 +142,6 @@ def telegram_bot():
 
             user = User(message.chat.id)
             user.mode = 0
-            user.phase = 0
             user.write()
 
             bot.send_message(
@@ -122,7 +149,7 @@ def telegram_bot():
                 'К сожалению, произошла неожиданная ошибка. '
                 'Поддержка рассмотрит Вашу проблему, чтобы подобные ошибки больше не тревожили Вас.'
             )
-            bot.send_message(message.chat.id, main_menu, reply_markup=main_menu_button)
+            bot.send_message(message.chat.id, main_menu, reply_markup=main_menu_button, parse_mode='Markdown')
 
             raise Exception(f'Exception code: 152\nID: {message.chat.id}\nMessage: {message.text}\nException: "{ex}"')
 
@@ -160,162 +187,80 @@ def telegram_bot():
                         "Я здесь, чтобы познакомить Вас с богатой историей этого региона.\n\n"
                         "Исследуйте населенные пункты Прикамья, узнайте о людях, которые оставили неизгладимый "
                         "след в его истории, и поделитесь своими собственными знаниями о регионе.\n\n"
-                        "Начните ваше путешествие прямо сейчас и откройте для себя красоту и наследие Прикамья!"
+                        "Начните ваше путешествие прямо сейчас и откройте для себя красоту и наследие Прикамья!",
+                        parse_mode='Markdown'
                     )
-                bot.send_message(message.chat.id, main_menu, reply_markup=main_menu_button)
+                bot.send_message(message.chat.id, main_menu, reply_markup=main_menu_button, parse_mode='Markdown')
                 user.mode = 0
-                user.phase = 0
 
             elif user.mode == 0:
                 if message.text.lower() == 'города':
                     bot.send_message(
                         message.chat.id,
-                        "Выберите режим работы при помощи кнопок ниже",
-                        reply_markup=m1_p0_button
+                        "Выберите режим работы, используя кнопки ниже",
+                        reply_markup=city_selection_menu_buttons
                     )
                     user.mode = 1
 
                 elif message.text.lower() == 'люди':
                     bot.send_message(
                         message.chat.id,
-                        "Выберите режим работы при помощи кнопок ниже",
-                        reply_markup=m2_p0_button
+                        "Выберите режим работы, используя кнопки ниже",
+                        reply_markup=human_selection_menu_buttons
                     )
                     user.mode = 2
 
                 elif message.text.lower() == 'контакты поддержки':
                     bot.send_message(
                         message.chat.id,
-                        "*Контакты поддержки:*\n"
-                        "https://t.me/VladimirRumyantsev\n"
-                        "https://t.me/LyutyChyort\n"
-                        "https://t.me/kystikikolychie\n"
-                        "https://t.me/Lisiy_Svet\n\n"
-                        "Чтобы поддержать разработчиков финансово, напишите одному из контактов.",
-                        reply_markup=main_menu_button, parse_mode='Markdown'
+                        f'Контакты поддержки:\n'
+                        f'https://t.me/VladimirRumyantsev\n'
+                        f'https://t.me/LyutyChyort\n'
+                        f'https://t.me/kystikikolychie\n'
+                        f'https://t.me/Lisiy_Svet\n\n'
+                        f'Чтобы поддержать разработчиков финансово, напишите одному из контактов.',
+                        reply_markup=main_menu_button
                     )
 
             elif user.mode == 1:
-                if user.phase == 0:
-                    if message.text.lower() == 'определённый город':
-                        cities = os.listdir('data/cities')
-                        line = ''
-                        for i in cities:
-                            line += f'\n• [{i}](tg://resolve?domain=history_of_parma_bot&text={i})'
-
-                        bot.send_message(
-                            message.chat.id,
-                            f"Введите название города, о котором желаете узнать больше"
-                            f"\n\nГорода, которые у нас есть:{line}",
-                            reply_markup=m1_p1_button
-                        )
-                        user.phase = 1
-
-                    elif message.text.lower() == 'случайный город':
-                        arr = os.listdir('data/cities')
-                        index = random.randint(0, len(arr) - 1)
-                        city = arr[index]
-
-                        bot.send_photo(message.chat.id, photo=open(f'data/cities/{city}/{city}.jpg', 'rb'))
-                        with open(f'data/cities/{city}/{city}.txt', 'r') as file:
-                            bot.send_message(message.chat.id, file.read(), reply_markup=m1_p0_button)
-
-                elif (user.phase == 1) and (message.text.lower() == 'назад'):
+                if message.text.lower() == 'определённый город':
                     bot.send_message(
                         message.chat.id,
-                        "Выберите режим работы при помощи кнопок ниже",
-                        reply_markup=m1_p0_button
+                        "Выберите город, о котором хотите узнать больше",
+                        reply_markup=get_inline_keyboard('data/cities')
                     )
-                    user.phase = 0
 
-                elif user.phase == 1:
-                    city = str(message.text)[0].upper() + str(message.text)[1:].lower()
-                    try:
-                        bot.send_photo(message.chat.id, photo=open(f'data/cities/{city}/{city}.jpg', 'rb'))
-                        with open(f'data/cities/{city}/{city}.txt', 'r') as file:
-                            bot.send_message(message.chat.id, file.read(), reply_markup=m1_p1_button)
+                elif message.text.lower() == 'случайный город':
+                    arr = os.listdir('data/cities')
+                    index = random.randint(0, len(arr) - 1)
+                    city = arr[index]
 
+                    bot.send_photo(message.chat.id, photo=open(f'data/cities/{city}/{city}.jpg', 'rb'))
+                    with open(f'data/cities/{city}/{city}.txt', 'r') as file:
                         bot.send_message(
-                            message.chat.id,
-                            'Вы можете ввести название другого города, либо выйти в главное меню.',
-                            reply_markup=m1_p1_button
+                            message.chat.id, file.read(),
+                            reply_markup=city_selection_menu_buttons, parse_mode='Markdown'
                         )
-                    except FileNotFoundError:
-                        cities = os.listdir('data/cities')
-                        line = ''
-                        for i in cities:
-                            line += f'\n• [{i}](tg://resolve?domain=history_of_parma_bot&text={i})'
-
-                        bot.send_message(
-                            message.chat.id,
-                            'Данный город не найден в базе данных. '
-                            'Вы можете ввести название другого города, либо выйти в главное меню.\n\n'
-                            f'Города, которые у нас есть:{line}',
-                            reply_markup=m1_p1_button
-                        )
-                    except Exception as ex:
-                        raise Exception(f'Exception code: 238\nException: {ex}')
 
             elif user.mode == 2:
-                if user.phase == 0:
-                    if message.text.lower() == 'определённый человек':
-                        people = os.listdir('data/people')
-                        line = ''
-                        for i in people:
-                            line += f'\n• [{i}](tg://resolve?domain=history_of_parma_bot&text={i})'
-
-                        bot.send_message(
-                            message.chat.id,
-                            f"Введите фамилию человека, о котором желаете узнать больше"
-                            f"\n\nЛюди, которые у нас есть:{line}",
-                            reply_markup=m2_p1_button
-                        )
-                        user.phase = 1
-
-                    elif message.text.lower() == 'случайный человек':
-                        arr = os.listdir('data/people')
-                        index = random.randint(0, len(arr) - 1)
-                        human = arr[index]
-
-                        bot.send_photo(message.chat.id, photo=open(f'data/people/{human}/{human}.jpg', 'rb'))
-                        with open(f'data/people/{human}/{human}.txt', 'r') as file:
-                            bot.send_message(message.chat.id, file.read(), reply_markup=m2_p0_button)
-
-                elif (user.phase == 1) and (message.text.lower() == 'назад'):
+                if message.text.lower() == 'определённый человек':
                     bot.send_message(
                         message.chat.id,
-                        "Выберите режим работы при помощи кнопок ниже",
-                        reply_markup=m2_p0_button
+                        "Выберите человека, о котором хотите узнать больше",
+                        reply_markup=get_inline_keyboard('data/people')
                     )
-                    user.phase = 0
 
-                elif user.phase == 1:
-                    human = str(message.text)[0].upper() + str(message.text)[1:].lower()
-                    try:
-                        bot.send_photo(message.chat.id, photo=open(f'data/people/{human}/{human}.jpg', 'rb'))
-                        with open(f'data/people/{human}/{human}.txt', 'r') as file:
-                            bot.send_message(message.chat.id, file.read(), reply_markup=m2_p1_button)
+                elif message.text.lower() == 'случайный человек':
+                    arr = os.listdir('data/people')
+                    index = random.randint(0, len(arr) - 1)
+                    human = arr[index]
 
+                    bot.send_photo(message.chat.id, photo=open(f'data/people/{human}/{human}.jpg', 'rb'))
+                    with open(f'data/people/{human}/{human}.txt', 'r') as file:
                         bot.send_message(
-                            message.chat.id,
-                            'Вы можете ввести фамилию другого человека, либо выйти в главное меню.',
-                            reply_markup=m2_p1_button
+                            message.chat.id, file.read(),
+                            reply_markup=human_selection_menu_buttons, parse_mode='Markdown'
                         )
-                    except FileNotFoundError:
-                        people = os.listdir('data/people')
-                        line = ''
-                        for i in people:
-                            line += f'\n• [{i}](tg://resolve?domain=history_of_parma_bot&text={i})'
-
-                        bot.send_message(
-                            message.chat.id,
-                            'Данный человек не найден в базе данных. '
-                            'Вы можете ввести фамилию другого человека, либо выйти в главное меню.\n\n'
-                            f'Люди, которые у нас есть:{line}',
-                            reply_markup=m2_p1_button
-                        )
-                    except Exception as ex:
-                        raise Exception(f'Exception code: 238\nException: {ex}')
 
             user.write()
 
@@ -326,8 +271,8 @@ def telegram_bot():
                 'Поддержка рассмотрит Вашу проблему, чтобы подобные ошибки больше не тревожили Вас.'
             )
 
-            raise Exception(f'Exception code: 280\nID: {message.chat.id}\nMode: {str(user.mode)}\n'
-                            f'Phase: {str(user.phase)}\nMessage: {message.text}\nException: "{ex}"')
+            raise Exception(f'Exception code: 280\nID: {message.chat.id}\n'
+                            f'Mode: {str(user.mode)}\nMessage: {message.text}\nException: "{ex}"')
 
     bot.polling()
 
