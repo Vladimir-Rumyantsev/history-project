@@ -6,7 +6,7 @@ import time
 import random
 
 
-bot = telebot.TeleBot('6928806121:AAHpUedibrQY4LU8_CIHu51d680kN41f9aM')
+bot = telebot.TeleBot('TOKEN')
 
 main_menu = ('*Главное меню*\n\nУзнайте больше о Прикамье и его выдающихся жителях!\n\n'
              '*• Города:* Исследуйте историю населенных пунктов региона.\n'
@@ -102,19 +102,22 @@ def telegram_bot():
     @bot.callback_query_handler(func=lambda call: True)
     def callback_handler(call):
         user = User(call.message.chat.id)
-        obj = call.data
 
         if user.mode == 1:
             response = 'К сожалению, данный город не найден в нашей базе данных.'
-            path = 'data/cities'
+            path = f'data/cities/{call.data}'
         else:
             response = 'К сожалению, данный человек не найден в нашей базе данных.'
-            path = 'data/people'
+            path = f'data/people/{call.data}'
 
         try:
-            with open(f'{path}/{obj}/{obj}.txt', 'r') as file:
-                response = file.read()
-            bot.send_photo(call.message.chat.id, photo=open(f'{path}/{obj}/{obj}.jpg', 'rb'))
+            objects = os.listdir(path)
+            for obj in objects:
+                if obj[-4:] == '.jpg':
+                    bot.send_photo(call.message.chat.id, photo=open(f'{path}/{obj}', 'rb'))
+                else:
+                    with open(f'{path}/{obj}', 'r') as file:
+                        response = file.read()
         except FileNotFoundError:
             pass
         except Exception as ex:
@@ -231,16 +234,21 @@ def telegram_bot():
                     )
 
                 elif message.text.lower() == 'случайный город':
-                    arr = os.listdir('data/cities')
+                    path = 'data/cities'
+                    arr = os.listdir(path)
                     index = random.randint(0, len(arr) - 1)
                     city = arr[index]
-
-                    bot.send_photo(message.chat.id, photo=open(f'data/cities/{city}/{city}.jpg', 'rb'))
-                    with open(f'data/cities/{city}/{city}.txt', 'r') as file:
-                        bot.send_message(
-                            message.chat.id, file.read(),
-                            reply_markup=city_selection_menu_buttons, parse_mode='Markdown'
-                        )
+                    path = f'data/cities/{city}'
+                    objects = os.listdir(path)
+                    response = ''
+                    for obj in objects:
+                        if obj[-4:] == '.jpg':
+                            bot.send_photo(message.chat.id, photo=open(f'{path}/{obj}', 'rb'))
+                        else:
+                            with open(f'{path}/{obj}', 'r') as file:
+                                response += file.read()
+                    bot.send_message(message.chat.id, response,
+                                     reply_markup=city_selection_menu_buttons, parse_mode='Markdown')
 
             elif user.mode == 2:
                 if message.text.lower() == 'определённый человек':
@@ -251,16 +259,21 @@ def telegram_bot():
                     )
 
                 elif message.text.lower() == 'случайный человек':
-                    arr = os.listdir('data/people')
+                    path = 'data/people'
+                    arr = os.listdir(path)
                     index = random.randint(0, len(arr) - 1)
                     human = arr[index]
-
-                    bot.send_photo(message.chat.id, photo=open(f'data/people/{human}/{human}.jpg', 'rb'))
-                    with open(f'data/people/{human}/{human}.txt', 'r') as file:
-                        bot.send_message(
-                            message.chat.id, file.read(),
-                            reply_markup=human_selection_menu_buttons, parse_mode='Markdown'
-                        )
+                    path = f'data/people/{human}'
+                    objects = os.listdir(path)
+                    response = ''
+                    for obj in objects:
+                        if obj[-4:] == '.jpg':
+                            bot.send_photo(message.chat.id, photo=open(f'{path}/{obj}', 'rb'))
+                        else:
+                            with open(f'{path}/{obj}', 'r') as file:
+                                response += file.read()
+                    bot.send_message(message.chat.id, response,
+                                     reply_markup=city_selection_menu_buttons, parse_mode='Markdown')
 
             user.write()
 
